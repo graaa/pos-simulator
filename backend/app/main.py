@@ -36,6 +36,16 @@ engine = create_engine(SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
+class ItemModel(Base):
+    __tablename__ = "items"
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, nullable=False)
+    price = Column(Float, nullable=False)
+    category = Column(String, nullable=True)
+    description = Column(String, nullable=True)
+    active = Column(String, nullable=False, default="true")
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
 class OrderModel(Base):
     __tablename__ = "orders"
     id = Column(Integer, primary_key=True, index=True)
@@ -70,12 +80,77 @@ class TxnModel(Base):
 Base.metadata.create_all(bind=engine)
 
 # ----------------------------
+# Initialize dummy restaurant data
+# ----------------------------
+def init_restaurant_data():
+    db: Session = next(get_db())
+    
+    # Check if items already exist
+    if db.query(ItemModel).count() > 0:
+        return
+    
+    # Costa Rican restaurant menu items
+    restaurant_items = [
+        # Appetizers
+        {"name": "Ceviche de Pescado", "price": 4500, "category": "Appetizers", "description": "Fresh fish ceviche with lime and cilantro"},
+        {"name": "Patacones", "price": 2800, "category": "Appetizers", "description": "Fried plantain slices with refried beans"},
+        {"name": "Empanadas de Carne", "price": 2200, "category": "Appetizers", "description": "Beef empanadas with chimichurri sauce"},
+        
+        # Main Dishes
+        {"name": "Casado", "price": 5500, "category": "Main Dishes", "description": "Traditional plate with rice, beans, meat, and salad"},
+        {"name": "Gallo Pinto", "price": 3200, "category": "Main Dishes", "description": "Rice and beans with eggs and plantains"},
+        {"name": "Arroz con Pollo", "price": 4800, "category": "Main Dishes", "description": "Chicken and rice with vegetables"},
+        {"name": "Pescado Frito", "price": 6200, "category": "Main Dishes", "description": "Fried whole fish with rice and salad"},
+        {"name": "Chifrijo", "price": 4200, "category": "Main Dishes", "description": "Rice, beans, pork, and pico de gallo"},
+        
+        # Beverages
+        {"name": "Cerveza Imperial", "price": 1800, "category": "Beverages", "description": "Local Costa Rican beer"},
+        {"name": "Cerveza Pilsen", "price": 1800, "category": "Beverages", "description": "Another local beer option"},
+        {"name": "Agua Fresca", "price": 1200, "category": "Beverages", "description": "Fresh fruit water (tamarind, hibiscus, or lime)"},
+        {"name": "Café Chorreado", "price": 1500, "category": "Beverages", "description": "Traditional Costa Rican coffee"},
+        {"name": "Horchata", "price": 2000, "category": "Beverages", "description": "Rice and cinnamon drink"},
+        
+        # Desserts
+        {"name": "Tres Leches", "price": 2800, "category": "Desserts", "description": "Traditional three-milk cake"},
+        {"name": "Flan", "price": 2200, "category": "Desserts", "description": "Caramel custard dessert"},
+        {"name": "Arroz con Leche", "price": 2000, "category": "Desserts", "description": "Rice pudding with cinnamon"},
+    ]
+    
+    for item_data in restaurant_items:
+        db_item = ItemModel(**item_data)
+        db.add(db_item)
+    
+    db.commit()
+    print("Restaurant menu initialized with dummy data")
+
+# Initialize data on startup
+init_restaurant_data()
+
+# ----------------------------
 # Schemas
 # ----------------------------
 class Item(BaseModel):
     name: str
     qty: int = Field(..., gt=0)
     price: float = Field(..., ge=0)
+
+class ItemCreate(BaseModel):
+    name: str
+    price: float = Field(..., ge=0)
+    category: Optional[str] = None
+    description: Optional[str] = None
+
+class ItemOut(BaseModel):
+    id: int
+    name: str
+    price: float
+    category: Optional[str]
+    description: Optional[str]
+    active: str
+    created_at: datetime
+
+    class Config:
+        orm_mode = True
 
 class OrderCreate(BaseModel):
     table: Optional[str] = None
@@ -128,6 +203,24 @@ def get_db():
 
 def calc_subtotal(items: List[Item]) -> float:
     return float(sum(i.qty * i.price for i in items))
+
+# ----------------------------
+# Items
+# ----------------------------
+@app.get("/items", response_model=List[ItemOut])
+def get_items():
+    db: Session = next(get_db())
+    items = db.query(ItemModel).filter(ItemModel.active == "true").all()
+    return items
+
+@app.post("/items", response_model=ItemOut)
+def create_item(item: ItemCreate):
+    db: Session = next(get_db())
+    db_item = ItemModel(**item.dict())
+    db.add(db_item)
+    db.commit()
+    db.refresh(db_item)
+    return db_item
 
 # ----------------------------
 # Orders
