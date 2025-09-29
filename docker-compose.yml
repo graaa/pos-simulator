@@ -6,7 +6,6 @@ services:
       - "8001:8000"
     volumes:
       - ./backend/app:/app/app
-      - ./backend/pos.db:/app/pos.db
   frontend:
     working_dir: /app
     image: node:18-alpine
