@@ -123,8 +123,7 @@ def init_restaurant_data():
     db.commit()
     print("Restaurant menu initialized with dummy data")
 
-# Initialize data on startup
-init_restaurant_data()
+# Initialize data on startup (moved after get_db definition)
 
 # ----------------------------
 # Schemas
@@ -196,6 +195,9 @@ def get_db():
         yield db
     finally:
         db.close()
+
+# Initialize data on startup
+init_restaurant_data()
 
 # ----------------------------
 # Helpers
