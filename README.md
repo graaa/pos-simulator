@@ -9,8 +9,8 @@ Minimal POS to demo datáfono integration patterns expected by CR acquirers (e.g
 ```bash
 docker compose up --build
 ```
-Open http://localhost:5173 
-Backend API at http://localhost:8000/docs
+Open http://localhost:5174 
+Backend API at http://localhost:8001/docs
 
 ## Dev (manual)
 Backend:
