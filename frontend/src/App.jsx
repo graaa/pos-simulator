@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 
-const API = import.meta.env.VITE_API_URL || 'http://localhost:8000'
+const API = import.meta.env.VITE_API_URL || 'http://64.227.83.209:8001'
 
 export default function App(){
   const [items, setItems] = useState([
